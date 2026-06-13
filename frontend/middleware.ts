@@ -3,17 +3,24 @@ import { NextResponse } from "next/server";
 
 const isDevBypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true";
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+let clerkHandler: any = null;
 
-const clerkHandler = clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect();
+export default function middleware(req: any, event: any) {
+  if (isDevBypass) {
+    return NextResponse.next();
   }
-});
 
-export default isDevBypass
-  ? () => NextResponse.next()
-  : clerkHandler;
+  if (!clerkHandler) {
+    const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+    clerkHandler = clerkMiddleware(async (auth, req) => {
+      if (isProtectedRoute(req)) {
+        await auth.protect();
+      }
+    });
+  }
+
+  return clerkHandler(req, event);
+}
 
 export const config = {
   matcher: [
